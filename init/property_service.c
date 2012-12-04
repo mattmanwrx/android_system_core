@@ -94,6 +94,9 @@ struct {
     { "persist.security.", AID_SYSTEM,   0 },
     { "persist.service.bdroid.", AID_BLUETOOTH,   0 },
     { "selinux."         , AID_SYSTEM,   0 },
+    { "htc."         	, AID_MEDIA,   0 },
+    { "media.tegra."	, AID_MEDIA,	0 },
+    { "service.bootanim.", AID_GRAPHICS,    0 },
     { NULL, 0, 0 }
 };
 
@@ -154,12 +157,13 @@ out:
     return -1;
 }
 
-/* (8 header words + 247 toc words) = 1020 bytes */
-/* 1024 bytes header and toc + 247 prop_infos @ 128 bytes = 32640 bytes */
+/* (8 header words + 372 toc words) = 1520 bytes */
+/* 1536 bytes header and toc + 372 prop_infos @ 128 bytes = 49152 bytes */
 
-#define PA_COUNT_MAX  247
-#define PA_INFO_START 1024
-#define PA_SIZE       32768
+#define PA_COUNT_MAX  372
+#define PA_INFO_START 1536
+#define PA_SIZE       49152
+
 
 static workspace pa_workspace;
 static prop_info *pa_info_array;
@@ -364,7 +368,10 @@ int property_set(const char *name, const char *value)
         __futex_wake(&pa->serial, INT32_MAX);
     } else {
         pa = __system_property_area__;
-        if(pa->count == PA_COUNT_MAX) return -1;
+        if(pa->count == PA_COUNT_MAX) {
+            ERROR("reached PA_COUNT_MAX, silently dropping prop %s\n", name);
+            return -1;
+        }
 
         pi = pa_info_array + pa->count;
         pi->serial = (valuelen << 24);
