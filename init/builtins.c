@@ -405,10 +405,6 @@ int do_mount(int nargs, char **args)
         }
 
         goto exit_success;
-    } else if (!strncmp(source, "hox@", 4)) {
-        /* fixme: we should also support ext4 for rogro82 ;-) */
-        mount("/dev/block/mmcblk0p14", "/data/media", "vfat", 0, "uid=1023,gid=1023,umask=0007");
-        goto exit_success;
     } else if (!strncmp(source, "loop@", 5)) {
         int mode, loop, fd;
         struct loop_info info;
