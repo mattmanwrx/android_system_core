@@ -459,29 +459,6 @@ exit_success:
 
 }
 
-#define PFF_BLOCKDEV_GUESS "/dev/block/platform/sdhci-tegra.3/by-name/ISD"
-#define PFF_SOURCE_EXT4 "/fstab.endeavoru.ext4"
-#define PFF_SOURCE_VFAT "/fstab.endeavoru.vfat"
-char *guess_fstab_file()
-{
-    int fd = -1;
-    unsigned char bytes[3] = {0};
-    
-    if ((fd = open(PFF_BLOCKDEV_GUESS, O_RDONLY)) < 0)
-        goto early_exit;
-    
-    read(fd, bytes, 3);
-    close(fd);
-    
-    if(bytes[0] != 0xeb && bytes[2] != 0x90) {
-        /* does NOT look like vfat -> ext4 maybe? */
-        return PFF_SOURCE_EXT4;
-    }
-early_exit:
-    return PFF_SOURCE_VFAT;
-}
-
-
 int do_mount_all(int nargs, char **args)
 {
     pid_t pid;
@@ -512,7 +489,7 @@ int do_mount_all(int nargs, char **args)
     } else if (pid == 0) {
         /* child, call fs_mgr_mount_all() */
         klog_set_level(6);  /* So we can see what fs_mgr_mount_all() does */
-        child_ret = fs_mgr_mount_all(guess_fstab_file());
+        child_ret = fs_mgr_mount_all(args[1]);
         if (child_ret == -1) {
             ERROR("fs_mgr_mount_all returned an error\n");
         }
