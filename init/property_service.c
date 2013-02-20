@@ -50,6 +50,8 @@
 #include "util.h"
 #include "log.h"
 
+#include <device_perms.h>
+
 #define PERSISTENT_PROPERTY_DIR  "/data/property"
 
 static int persistent_properties_loaded = 0;
@@ -58,12 +60,13 @@ static int property_area_inited = 0;
 static int property_set_fd = -1;
 
 /* White list of permissions for setting property services. */
+#ifndef PROPERTY_PERMS
 struct {
     const char *prefix;
     unsigned int uid;
     unsigned int gid;
 } property_perms[] = {
-    { "net.rmnet0.",      AID_RADIO,    0 },
+    { "net.rmnet",        AID_RADIO,    0 },
     { "net.gprs.",        AID_RADIO,    0 },
     { "net.ppp",          AID_RADIO,    0 },
     { "net.qmi",          AID_RADIO,    0 },
@@ -80,6 +83,7 @@ struct {
     { "hw.",              AID_SYSTEM,   0 },
     { "sys.",             AID_SYSTEM,   0 },
     { "service.",         AID_SYSTEM,   0 },
+    { "service.",         AID_RADIO,    0 },
     { "wlan.",            AID_SYSTEM,   0 },
     { "bluetooth.",       AID_BLUETOOTH,   0 },
     { "dhcp.",            AID_SYSTEM,   0 },
@@ -91,19 +95,31 @@ struct {
     { "service.adb.tcp.port", AID_SHELL,    0 },
     { "persist.sys.",     AID_SYSTEM,   0 },
     { "persist.service.", AID_SYSTEM,   0 },
+    { "persist.service.", AID_RADIO,    0 },
     { "persist.security.", AID_SYSTEM,   0 },
     { "persist.service.bdroid.", AID_BLUETOOTH,   0 },
     { "selinux."         , AID_SYSTEM,   0 },
+    { "net.pdp",          AID_RADIO,    AID_RADIO },
+    { "service.bootanim.exit", AID_GRAPHICS, 0 },
     { "htc."         	, AID_MEDIA,   0 },
     { "media.tegra."	, AID_MEDIA,	0 },
     { "service.bootanim.", AID_GRAPHICS,    0 },
+#ifdef PROPERTY_PERMS_APPEND
+PROPERTY_PERMS_APPEND
+#endif
+
+
+
     { NULL, 0, 0 }
 };
+/* Avoid extending this array. Check device_perms.h */
+#endif
 
 /*
  * White list of UID that are allowed to start/stop services.
  * Currently there are no user apps that require.
  */
+#ifndef CONTROL_PERMS
 struct {
     const char *service;
     unsigned int uid;
@@ -111,8 +127,13 @@ struct {
 } control_perms[] = {
     { "dumpstate",AID_SHELL, AID_LOG },
     { "ril-daemon",AID_RADIO, AID_RADIO },
+#ifdef CONTROL_PERMS_APPEND
+CONTROL_PERMS_APPEND
+#endif
      {NULL, 0, 0 }
 };
+/* Avoid extending this array. Check device_perms.h */
+#endif
 
 typedef struct {
     void *data;
@@ -369,9 +390,9 @@ int property_set(const char *name, const char *value)
     } else {
         pa = __system_property_area__;
         if(pa->count == PA_COUNT_MAX) {
-            ERROR("reached PA_COUNT_MAX, silently dropping prop %s\n", name);
-            return -1;
-        }
+		ERROR("reached PA_COUNT_MAX, silently dropping prop %s\n", name);
+	return -1;
+	}
 
         pi = pa_info_array + pa->count;
         pi->serial = (valuelen << 24);
